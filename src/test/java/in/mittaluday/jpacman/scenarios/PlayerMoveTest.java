@@ -1,9 +1,7 @@
 package in.mittaluday.jpacman.scenarios;
 
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.util.List;
 
@@ -18,6 +16,7 @@ import nl.tudelft.jpacman.board.Unit;
 import nl.tudelft.jpacman.game.SinglePlayerGame;
 import nl.tudelft.jpacman.level.Pellet;
 import nl.tudelft.jpacman.level.Player;
+import nl.tudelft.jpacman.npc.ghost.Ghost;
 import nl.tudelft.jpacman.npc.ghost.Navigation;
 
 public class PlayerMoveTest {
@@ -80,6 +79,7 @@ public class PlayerMoveTest {
 		game.start();
 		
 		Player player = game.getPlayers().get(0);
+		assertTrue(player.isAlive());
 		Unit nearestPellet = Navigation.findNearest(Pellet.class, player.getSquare());
 		List<Direction> moves = Navigation.shortestPath(player.getSquare(), nearestPellet.getSquare(), player);
 		for (Direction move : moves) {
@@ -87,12 +87,7 @@ public class PlayerMoveTest {
 		}
 		
 		Direction lastMove = moves.get(moves.size()-1);
-		switch(lastMove){
-			case EAST: lastMove = Direction.WEST; break;
-			case WEST: lastMove = Direction.EAST; break;
-			case NORTH: lastMove = Direction.SOUTH; break;
-			case SOUTH: lastMove = Direction.NORTH; break;
-		}
+		lastMove = getOppositeDirection(lastMove);
 			
 		int startingScore = player.getScore();
 		game.move(player, lastMove);
@@ -100,5 +95,42 @@ public class PlayerMoveTest {
 			assertEquals("Score changes on moving to an empty square", startingScore, player.getScore());
 		}
 		game.stop();
+	}
+	
+	/**
+	 * Checks if player dies on coming in contact with a Ghost
+	 */
+	@Test
+	public void playerShouldAieOnMovingOnGhost(){
+		SinglePlayerGame game = (SinglePlayerGame) gameLauncher.getGame();
+		game.start();
+		
+		Player player = game.getPlayers().get(0);
+		Unit nearestGhost = Navigation.findNearest(Ghost.class, player.getSquare());
+		for (Direction dir : Direction.values()) {
+			Square adjacentSquare = nearestGhost.getSquare().getSquareAt(dir);
+			if(adjacentSquare.isAccessibleTo(player)){
+				player.occupy(adjacentSquare);
+				Direction moveToMake = getOppositeDirection(dir);
+				game.move(player, moveToMake);
+				assertFalse("Player should die when it moves on a ghost", player.isAlive());
+			}
+		}
+	}
+	
+	
+	/**
+	 * Get the opposite direction of a given direction
+	 * @param currentDirection
+	 * @return
+	 */
+	private Direction getOppositeDirection(Direction currentDirection){
+		switch(currentDirection){
+			case EAST: currentDirection = Direction.WEST; break;
+			case WEST: currentDirection = Direction.EAST; break;
+			case NORTH: currentDirection = Direction.SOUTH; break;
+			case SOUTH: currentDirection = Direction.NORTH; break;
+		}
+		return currentDirection;
 	}
 }
