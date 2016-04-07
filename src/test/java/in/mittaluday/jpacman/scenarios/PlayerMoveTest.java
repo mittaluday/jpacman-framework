@@ -1,7 +1,10 @@
 package in.mittaluday.jpacman.scenarios;
 
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
@@ -9,24 +12,44 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.google.common.collect.Lists;
+
 import nl.tudelft.jpacman.Launcher;
+import nl.tudelft.jpacman.board.BoardFactory;
 import nl.tudelft.jpacman.board.Direction;
 import nl.tudelft.jpacman.board.Square;
 import nl.tudelft.jpacman.board.Unit;
+import nl.tudelft.jpacman.game.GameFactory;
 import nl.tudelft.jpacman.game.SinglePlayerGame;
+import nl.tudelft.jpacman.level.Level;
+import nl.tudelft.jpacman.level.LevelFactory;
+import nl.tudelft.jpacman.level.MapParser;
 import nl.tudelft.jpacman.level.Pellet;
 import nl.tudelft.jpacman.level.Player;
+import nl.tudelft.jpacman.level.PlayerFactory;
 import nl.tudelft.jpacman.npc.ghost.Ghost;
+import nl.tudelft.jpacman.npc.ghost.GhostFactory;
 import nl.tudelft.jpacman.npc.ghost.Navigation;
+import nl.tudelft.jpacman.sprite.PacManSprites;
 
 public class PlayerMoveTest {
 	
 	private Launcher gameLauncher;
+	private PacManSprites sprites;
+	private MapParser parser;
+	private GameFactory gf;
 	
 	@Before
 	public void setUpPacman(){
 		gameLauncher = new Launcher();
 		gameLauncher.launch();
+		
+		sprites = new PacManSprites();
+		parser = new MapParser(new LevelFactory(sprites, new GhostFactory(
+				sprites)), new BoardFactory(sprites));	
+		gf = new GameFactory(new PlayerFactory(sprites));
+
+		
 	}
 
 	@After
@@ -35,6 +58,7 @@ public class PlayerMoveTest {
 	}
 	
 	/**
+	 * Scenario 2.1
 	 * Checks if player consumes adjacent pellet and the score increases accordingly
 	 */
 	@Test
@@ -66,6 +90,7 @@ public class PlayerMoveTest {
 	}
 	
 	/**
+	 * Scenario 2.2
 	 * Checks if score stays same on moving the player to an empty square
 	 * 
 	 * 		Finds the nearest Pellet
@@ -98,10 +123,11 @@ public class PlayerMoveTest {
 	}
 	
 	/**
+	 * Scenario 2.3
 	 * Checks if player dies on coming in contact with a Ghost
 	 */
 	@Test
-	public void playerShouldAieOnMovingOnGhost(){
+	public void playerShouldDieOnMovingOnGhost(){
 		SinglePlayerGame game = (SinglePlayerGame) gameLauncher.getGame();
 		game.start();
 		
@@ -118,6 +144,37 @@ public class PlayerMoveTest {
 		}
 	}
 	
+	
+	/**
+	 * Scenario 2.4
+	 * Tests that player does not move into a wall
+	 */
+	@Test
+	public void playerShouldNotMoveOnAWall(){
+		Level level = parser.parseMap(Lists.newArrayList("###", "#P#", "###"));
+		SinglePlayerGame game = (SinglePlayerGame) gf.createSinglePlayerGame(level);
+		game.start();
+		Player player = game.getPlayers().get(0);
+		Square playerPosition = player.getSquare();
+		game.move(player, Direction.EAST);
+		assertEquals("Player position changed on moving into a wall", player.getSquare(), playerPosition);
+		
+	}
+	
+	/**
+	 * Scenario 2.5
+	 * Tests that player wins the game on eating the last pellet
+	 */
+	@Test
+	public void playerShouldWinWhenLastPelletIsEaten(){
+		//Use a single pellet board to test 
+		Level level = parser.parseMap(Lists.newArrayList("####", "#.P#", "####"));
+		SinglePlayerGame game = (SinglePlayerGame) gf.createSinglePlayerGame(level);
+		game.start();
+		Player player = game.getPlayers().get(0);
+		game.move(player, Direction.WEST);
+		assertFalse("Game is still in progress even after eating the last pellet", game.isInProgress());
+	}
 	
 	/**
 	 * Get the opposite direction of a given direction
